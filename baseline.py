@@ -4,11 +4,6 @@ import numpy as np
 import os 
 import math
 
-import matplotlib.pyplot as plt
-import matplotlib.pylab as pylab
-import matplotlib as mpl
-import seaborn as sns 
-
 from tqdm import tqdm
 from sklearn.model_selection import KFold
 from sklearn.metrics import mean_absolute_error, mean_squared_log_error, mean_squared_error
@@ -74,7 +69,7 @@ train_df, _, test_df, sample_submission_df = read_source_files(
 # train.loc[:, binary_features] = train.loc[:, binary_features].astype('int16')
 #%%
 
-def fit_cv(x, y, params):
+def fit_cv(x, y, params = None):
     cv = KFold(n_splits=3, random_state=RANDOM_SEED, shuffle=True)
 
     metrics = {
@@ -100,7 +95,7 @@ def fit_cv(x, y, params):
         metrics['rmsle'].append(rmsle)
         metrics['mse'].append(mse)
 
-        print(f"\tFold {fold_idx + 1}: \n\t MSLE: {rmsle}\n\t MAE: {mae}\n\t MSE: {mse}")
+        # print(f"\tFold {fold_idx + 1}: \n\t MSLE: {rmsle}\n\t MAE: {mae}\n\t MSE: {mse}")
 
 
     mean_mae = np.mean(metrics['mae'])
@@ -111,5 +106,7 @@ def fit_cv(x, y, params):
 
 
 x, y = train_df.drop('cost', axis = 1), train_df.cost
-mae, rmsle, mse = fit_cv()
+mae, rmsle, mse = fit_cv(x, y)
+
+print(f"\tMean metrics: \n\t MSLE: {rmsle}\n\t MAE: {mae}\n\t MSE: {mse}")
 # %%
