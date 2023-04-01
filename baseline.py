@@ -10,7 +10,7 @@ from sklearn.metrics import mean_absolute_error, mean_squared_log_error, mean_sq
 from xgboost import XGBRegressor
 
 RANDOM_SEED = 999
-
+N_SPLITS = 5
 #%%
 def read_source_files(
         data_folder = 'data',
@@ -69,44 +69,39 @@ train_df, _, test_df, sample_submission_df = read_source_files(
 # train.loc[:, binary_features] = train.loc[:, binary_features].astype('int16')
 #%%
 
-def fit_cv(x, y, params = None):
-    cv = KFold(n_splits=3, random_state=RANDOM_SEED, shuffle=True)
+cv = KFold(n_splits=N_SPLITS, random_state=RANDOM_SEED, shuffle=True)
 
-    metrics = {
-        "rmsle":[],
-        "mse":[],
-        "mae":[]
-    }
-
-
-    for fold_idx, (train_idxs, test_idxs) in enumerate(cv.split(x, y)):
-        x_train, x_valid = x.loc[train_idxs], x.loc[test_idxs]
-        y_train, y_valid = y.loc[train_idxs], y.loc[test_idxs]
-
-        model = XGBRegressor()
-        model.fit(x_train, y_train)
-
-        y_preds = model.predict(x_valid)
-        rmsle = math.sqrt(mean_squared_log_error(y_valid, y_preds))
-        mse = mean_squared_error(y_valid, y_preds)
-        mae = mean_absolute_error(y_valid, y_preds)
-
-        metrics['mae'].append(mae)
-        metrics['rmsle'].append(rmsle)
-        metrics['mse'].append(mse)
-
-        # print(f"\tFold {fold_idx + 1}: \n\t MSLE: {rmsle}\n\t MAE: {mae}\n\t MSE: {mse}")
-
-
-    mean_mae = np.mean(metrics['mae'])
-    mean_rmsle = np.mean(metrics['rmsle'])
-    mean_mse = np.mean(metrics['mse'])
-
-    return mean_mae, mean_rmsle, mean_mse
+metrics = {
+    "rmsle":[],
+    "mse":[],
+    "mae":[]
+}
 
 
 x, y = train_df.drop('cost', axis = 1), train_df.cost
-mae, rmsle, mse = fit_cv(x, y)
+for fold_idx, (train_idxs, test_idxs) in enumerate(cv.split(x, y)):
+    x_train, x_valid = x.loc[train_idxs], x.loc[test_idxs]
+    y_train, y_valid = y.loc[train_idxs], y.loc[test_idxs]
 
-print(f"\tMean metrics: \n\t MSLE: {rmsle}\n\t MAE: {mae}\n\t MSE: {mse}")
-# %%
+    model = XGBRegressor(tree_method = 'gpu_hist')
+    model.fit(x_train, y_train)
+
+    y_preds = model.predict(x_valid)
+    rmsle = math.sqrt(mean_squared_log_error(y_valid, y_preds))
+    mse = mean_squared_error(y_valid, y_preds)
+    mae = mean_absolute_error(y_valid, y_preds)
+
+    metrics['mae'].append(mae)
+    metrics['rmsle'].append(rmsle)
+    metrics['mse'].append(mse)
+
+    # print(f"\tFold {fold_idx + 1}: \n\t MSLE: {rmsle}\n\t MAE: {mae}\n\t MSE: {mse}")
+
+
+mean_mae = np.mean(metrics['mae'])
+mean_rmsle = np.mean(metrics['rmsle'])
+mean_mse = np.mean(metrics['mse'])
+
+
+print(f"\t{model.__repr__()}")
+print(f"\tMean metrics: \n\t MSLE: {mean_rmsle}\n\t MAE: {mean_mae}\n\t MSE: {mean_mse}")
